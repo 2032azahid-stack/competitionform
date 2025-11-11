@@ -19,12 +19,10 @@ mongoose.connect(MONGO_URI, { useNewUrlParser:true, useUnifiedTopology:true })
 
 const MemberSchema = new mongoose.Schema({
   name:{type:String,required:true},
-  gender:String,
-  dob:String,
   form:String,
   year:String,
   experience:String,
-  past:String,
+  past:{type:String,enum:['yes','no'],default:'no'},
   reason:String,
   feePaid:{type:Boolean,default:false},
   email:String
@@ -68,8 +66,8 @@ app.post('/submit', async (req,res)=>{
     if(!(p1Paid||p2Paid)) return res.status(400).json({ok:false,message:'Please go to Mr Smith (M22) To find out more. You cannot join.'});
 
     const members = [
-      { name:p1.name, gender:p1.gender||'', dob:p1.dob||'', form:p1.form||'', year:p1.year||'', experience:p1.experience||'', past:p1.past||'', reason:p1.reason||'', feePaid:p1Paid, email:p1email },
-      { name:p2.name, gender:p2.gender||'', dob:p2.dob||'', form:p2.form||'', year:p2.year||'', experience:p2.experience||'', past:p2.past||'', reason:p2.reason||'', feePaid:p2Paid, email:p2email }
+      { name:p1.name, form:p1.form||'', year:p1.year||'', experience:p1.experience||'', past:p1.past||'no', reason:p1.reason||'', feePaid:p1Paid, email:p1email },
+      { name:p2.name, form:p2.form||'', year:p2.year||'', experience:p2.experience||'', past:p2.past||'no', reason:p2.reason||'', feePaid:p2Paid, email:p2email }
     ];
 
     const g = new Group({ members, groupFeePaid: members.some(m=>m.feePaid) });
@@ -106,11 +104,11 @@ app.get('/teacher/export.csv', async (req,res)=>{
   if(!(req.session&&req.session.authenticated)) return res.status(401).send('Unauthorized');
   const groups = await Group.find().sort({createdAt:-1}).lean();
   const rows=[];
-  rows.push(['First Name','First Gender','First DOB','First Year','First Form','First Email','First FeePaid','Second Name','Second Gender','Second DOB','Second Year','Second Form','Second Email','Second FeePaid','GroupFeePaid','CreatedAt'].join(','));
+  rows.push(['First Name','First Year','First Form','First Email','First FeePaid','First PlayedBefore','Second Name','Second Year','Second Form','Second Email','Second FeePaid','Second PlayedBefore','GroupFeePaid','CreatedAt'].join(','));
   for(const g of groups){
     const m1=g.members[0]||{};
     const m2=g.members[1]||{};
-    const line=[m1.name,m1.gender,m1.dob,m1.year,m1.form,m1.email,(m1.feePaid?'yes':'no'),m2.name,m2.gender,m2.dob,m2.year,m2.form,m2.email,(m2.feePaid?'yes':'no'),(g.groupFeePaid?'yes':'no'),(g.createdAt?g.createdAt.toISOString():'')].map(csvSafe).join(',');
+    const line=[m1.name,m1.year,m1.form,m1.email,(m1.feePaid?'yes':'no'),m1.past,m2.name,m2.year,m2.form,m2.email,(m2.feePaid?'yes':'no'),m2.past,(g.groupFeePaid?'yes':'no'),(g.createdAt?g.createdAt.toISOString():'')].map(csvSafe).join(',');
     rows.push(line);
   }
   res.setHeader('Content-disposition','attachment; filename=entries.csv');
@@ -136,12 +134,10 @@ img.logo{position:absolute;right:18px;top:18px;width:64px;height:64px;object-fit
 .card{background:var(--card);padding:18px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
 label{display:block;color:var(--muted);font-size:13px;margin-bottom:6px}
 input,select,textarea{width:100%;padding:10px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.06);color:#e8f4ff}
-input[type="date"]{padding:8px}
 .row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .btn{padding:10px 14px;border-radius:8px;background:linear-gradient(180deg,var(--accent),#0b6fe0);color:white;border:none;cursor:pointer}
 .small{font-size:12px;color:#9fb3d9}
 .hidden{display:none}
-.summary{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;margin-top:12px}
 .notice{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;border-left:4px solid var(--accent);margin-bottom:12px}
 </style>
 </head>
@@ -160,14 +156,6 @@ input[type="date"]{padding:8px}
 <div class="row">
 <label>Full Name</label>
 <input name="p1[name]" required/>
-</div>
-<div class="row">
-<label>Gender (optional)</label>
-<input name="p1[gender]"/>
-</div>
-<div class="row">
-<label>Date of Birth</label>
-<input type="date" name="p1[dob]" required/>
 </div>
 <div class="row">
 <label>Form Group</label>
@@ -193,8 +181,12 @@ input[type="date"]{padding:8px}
 <input name="p1[experience]" required/>
 </div>
 <div class="row">
-<label>Past competition at Ark Victoria IT? (optional)</label>
-<input name="p1[past]"/>
+<label>Played before at Ark Victoria IT? (Yes/No)</label>
+<select name="p1[past]" required>
+<option value="">--select--</option>
+<option value="yes">Yes</option>
+<option value="no">No</option>
+</select>
 </div>
 <div class="row">
 <label>Why do you want to join?</label>
@@ -228,14 +220,6 @@ input[type="date"]{padding:8px}
 <input name="p2[name]" required/>
 </div>
 <div class="row">
-<label>Gender (optional)</label>
-<input name="p2[gender]"/>
-</div>
-<div class="row">
-<label>Date of Birth</label>
-<input type="date" name="p2[dob]" required/>
-</div>
-<div class="row">
 <label>Form Group</label>
 <select name="p2[form]" required>
 <option value="">--select--</option>
@@ -259,8 +243,12 @@ input[type="date"]{padding:8px}
 <input name="p2[experience]" required/>
 </div>
 <div class="row">
-<label>Past competition at Ark Victoria IT? (optional)</label>
-<input name="p2[past]"/>
+<label>Played before at Ark Victoria IT? (Yes/No)</label>
+<select name="p2[past]" required>
+<option value="">--select--</option>
+<option value="yes">Yes</option>
+<option value="no">No</option>
+</select>
 </div>
 <div class="row">
 <label>Why do you want to join?</label>
@@ -274,7 +262,6 @@ input[type="date"]{padding:8px}
 <option value="no">No</option>
 </select>
 </div>
-
 <button type="submit" class="btn" style="margin-top:14px;">Submit</button>
 </div>
 </form>
@@ -317,13 +304,13 @@ function teacherDashboard(groups,q=''){
   const rows = groups.map(g=>{
     const m1=g.members[0]||{};
     const m2=g.members[1]||{};
-    return `<tr><td>${escapeHtml(m1.name||'')}</td><td>${escapeHtml(m2.name||'')}</td><td>${escapeHtml(m1.gender||'')} ${m2.name?('/ '+escapeHtml(m2.gender||'')) : ''}</td><td>${escapeHtml(m1.dob||'')} ${m2.name?('/ '+escapeHtml(m2.dob||'')) : ''}</td><td>${escapeHtml(m1.year||'')} ${m2.name?('/ '+escapeHtml(m2.year||'')) : ''}</td><td>${escapeHtml(m1.form||'')} ${m2.name?('/ '+escapeHtml(m2.form||'')) : ''}</td><td>${escapeHtml(m1.experience||'')} ${m2.name?('/ '+escapeHtml(m2.experience||'')) : ''}</td><td>${escapeHtml(m1.past||'')} ${m2.name?('/ '+escapeHtml(m2.past||'')) : ''}</td><td>${escapeHtml(m1.email||'')} ${m2.name?('/ '+escapeHtml(m2.email||'')) : ''}</td><td>${(m1.feePaid?'yes':'no')} ${m2.name?('/ '+(m2.feePaid?'yes':'no')):''}</td><td>${g.groupFeePaid? 'yes':'no'}</td><td>${g.createdAt? new Date(g.createdAt).toLocaleString():''}</td></tr>`;
+    return `<tr><td>${escapeHtml(m1.name||'')}</td><td>${escapeHtml(m2.name||'')}</td><td>${escapeHtml(m1.year||'')} ${m2.name?('/ '+escapeHtml(m2.year||'')) : ''}</td><td>${escapeHtml(m1.form||'')} ${m2.name?('/ '+escapeHtml(m2.form||'')) : ''}</td><td>${escapeHtml(m1.experience||'')} ${m2.name?('/ '+escapeHtml(m2.experience||'')) : ''}</td><td>${escapeHtml(m1.past||'')} ${m2.name?('/ '+escapeHtml(m2.past||'')) : ''}</td><td>${escapeHtml(m1.email||'')} ${m2.name?('/ '+escapeHtml(m2.email||'')) : ''}</td><td>${(m1.feePaid?'yes':'no')} ${m2.name?('/ '+(m2.feePaid?'yes':'no')):''}</td><td>${g.groupFeePaid? 'yes':'no'}</td><td>${g.createdAt? new Date(g.createdAt).toLocaleString():''}</td></tr>`;
   }).join('\n');
 
   return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Dashboard</title><style>body{font-family:Inter,Arial;background:#071733;color:#e8f4ff;margin:0;padding:20px}header{display:flex;justify-content:space-between;align-items:center}input{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#e8f4ff}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:left;font-size:13px}a.btn{display:inline-block;padding:8px 10px;background:#1e90ff;color:white;border-radius:8px;text-decoration:none}</style></head><body>
 <header><div><h2>Teacher Dashboard</h2><div style="color:#9fb3d9">${groups.length} groups</div></div>
 <div><form method="get" action="/teacher/dashboard" style="display:inline"><input name="q" placeholder="search name/form/year/email" value="${escapeHtml(q||'')}" /></form>
 <a class="btn" href="/teacher/export.csv">Export CSV</a> <a class="btn" href="/teacher/logout">Logout</a></div></header>
-<div style="margin-top:12px;overflow:auto"><table><thead><tr><th>First</th><th>Second</th><th>Gender</th><th>DOB</th><th>Year</th><th>Form</th><th>Exp</th><th>Past</th><th>Email</th><th>Fee(each)</th><th>GroupFee</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></div>
+<div style="margin-top:12px;overflow:auto"><table><thead><tr><th>First</th><th>Second</th><th>Year</th><th>Form</th><th>Exp</th><th>Played Before</th><th>Email</th><th>Fee(each)</th><th>GroupFee</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></div>
 </body></html>`;
 }
