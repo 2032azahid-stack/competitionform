@@ -79,14 +79,30 @@ app.post('/submit', async (req,res)=>{
   }
 });
 
-app.get('/teacher',(req,res)=>{ if(req.session&&req.session.authenticated) return res.redirect('/teacher/dashboard'); res.setHeader('Content-Type','text/html; charset=utf-8'); res.send(teacherLogin('')); });
+// 🧑‍🏫 Teacher Login / Logout / Dashboard
+
+app.get('/teacher',(req,res)=>{ 
+  if(req.session&&req.session.authenticated) return res.redirect('/teacher/dashboard'); 
+  res.setHeader('Content-Type','text/html; charset=utf-8'); 
+  res.send(teacherLogin('')); 
+});
+
 app.post('/teacher/login',(req,res)=>{
   const pw=String((req.body&&req.body.password)||'');
   if(TEACHER_PASS&&pw===TEACHER_PASS){ req.session.authenticated=true; return res.redirect('/teacher/dashboard'); }
   res.send(teacherLogin('Incorrect password'));
 });
+
 app.get('/teacher/logout',(req,res)=>{ req.session.destroy(()=>res.redirect('/teacher')); });
 
+// 🗑️ Delete group
+app.post('/teacher/delete/:id', async (req,res)=>{
+  if(!(req.session&&req.session.authenticated)) return res.status(401).send('Unauthorized');
+  await Group.deleteOne({_id:req.params.id});
+  res.redirect('/teacher/dashboard');
+});
+
+// Dashboard + export
 app.get('/teacher/dashboard', async (req,res)=>{
   if(!(req.session&&req.session.authenticated)) return res.redirect('/teacher');
   const q=(req.query.q||'').trim();
@@ -153,115 +169,35 @@ input,select,textarea{width:100%;padding:10px;border-radius:8px;background:trans
 <div id="formCard" class="card hidden">
 <form id="entryForm">
 <h2>Player 1</h2>
-<div class="row">
-<label>Full Name</label>
-<input name="p1[name]" required/>
-</div>
-<div class="row">
-<label>Form Group</label>
-<select name="p1[form]" required>
-<option value="">--select--</option>
-<option>Yousafzai</option>
-<option>Zephaniah</option>
-<option>Cadbury</option>
-<option>Watt</option>
-<option>Tolkien</option>
-</select>
-</div>
-<div class="row">
-<label>Year</label>
-<select name="p1[year]" required>
-<option value="">--select--</option>
-<option>Year 7</option>
-<option>Year 8</option>
-</select>
-</div>
-<div class="row">
-<label>Experience with Poxel.IO</label>
-<input name="p1[experience]" required/>
-</div>
-<div class="row">
-<label>Played before at Ark Victoria IT? (Yes/No)</label>
-<select name="p1[past]" required>
-<option value="">--select--</option>
-<option value="yes">Yes</option>
-<option value="no">No</option>
-</select>
-</div>
-<div class="row">
-<label>Why do you want to join?</label>
-<textarea name="p1[reason]" required></textarea>
-</div>
-<div class="row">
-<label>Do you have a group? (Yes/No)</label>
-<select name="group" required>
-<option value="">--select--</option>
-<option value="yes">Yes</option>
-<option value="no">No</option>
-</select>
-</div>
-<div class="row">
-<label>Are you able to pay £1 fee?</label>
-<select name="p1[fee]" required>
-<option value="">--select--</option>
-<option value="yes">Yes</option>
-<option value="no">No</option>
-</select>
-</div>
-<div class="row">
-<label>Email (without @)</label>
-<input name="p1[email]" placeholder="e.g. john.smith" required/>
-</div>
+<div class="row"><label>Full Name</label><input name="p1[name]" required/></div>
+<div class="row"><label>Form Group</label>
+<select name="p1[form]" required><option value="">--select--</option><option>Yousafzai</option><option>Zephaniah</option><option>Cadbury</option><option>Watt</option><option>Tolkien</option></select></div>
+<div class="row"><label>Year</label>
+<select name="p1[year]" required><option value="">--select--</option><option>Year 7</option><option>Year 8</option></select></div>
+<div class="row"><label>Experience with Poxel.IO</label><input name="p1[experience]" required/></div>
+<div class="row"><label>Played before at Ark Victoria IT? (Yes/No)</label>
+<select name="p1[past]" required><option value="">--select--</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+<div class="row"><label>Why do you want to join?</label><textarea name="p1[reason]" required></textarea></div>
+<div class="row"><label>Do you have a group? (Yes/No)</label>
+<select name="group" required><option value="">--select--</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+<div class="row"><label>Are you able to pay £1 fee?</label>
+<select name="p1[fee]" required><option value="">--select--</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+<div class="row"><label>Email (without @)</label><input name="p1[email]" placeholder="e.g. john.smith" required/></div>
 
 <div id="player2Card" class="hidden">
 <h2>Player 2</h2>
-<div class="row">
-<label>Full Name</label>
-<input name="p2[name]" required/>
-</div>
-<div class="row">
-<label>Form Group</label>
-<select name="p2[form]" required>
-<option value="">--select--</option>
-<option>Yousafzai</option>
-<option>Zephaniah</option>
-<option>Cadbury</option>
-<option>Watt</option>
-<option>Tolkien</option>
-</select>
-</div>
-<div class="row">
-<label>Year</label>
-<select name="p2[year]" required>
-<option value="">--select--</option>
-<option>Year 7</option>
-<option>Year 8</option>
-</select>
-</div>
-<div class="row">
-<label>Experience with Poxel.IO</label>
-<input name="p2[experience]" required/>
-</div>
-<div class="row">
-<label>Played before at Ark Victoria IT? (Yes/No)</label>
-<select name="p2[past]" required>
-<option value="">--select--</option>
-<option value="yes">Yes</option>
-<option value="no">No</option>
-</select>
-</div>
-<div class="row">
-<label>Why do you want to join?</label>
-<textarea name="p2[reason]" required></textarea>
-</div>
-<div class="row">
-<label>Are you able to pay £1 fee?</label>
-<select name="p2[fee]" required>
-<option value="">--select--</option>
-<option value="yes">Yes</option>
-<option value="no">No</option>
-</select>
-</div>
+<div class="row"><label>Full Name</label><input name="p2[name]" required/></div>
+<div class="row"><label>Form Group</label>
+<select name="p2[form]" required><option value="">--select--</option><option>Yousafzai</option><option>Zephaniah</option><option>Cadbury</option><option>Watt</option><option>Tolkien</option></select></div>
+<div class="row"><label>Year</label>
+<select name="p2[year]" required><option value="">--select--</option><option>Year 7</option><option>Year 8</option></select></div>
+<div class="row"><label>Experience with Poxel.IO</label><input name="p2[experience]" required/></div>
+<div class="row"><label>Played before at Ark Victoria IT? (Yes/No)</label>
+<select name="p2[past]" required><option value="">--select--</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+<div class="row"><label>Why do you want to join?</label><textarea name="p2[reason]" required></textarea></div>
+<div class="row"><label>Are you able to pay £1 fee?</label>
+<select name="p2[fee]" required><option value="">--select--</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+<div class="row"><label>Email (without @)</label><input name="p2[email]" placeholder="e.g. jane.smith" required/></div>
 <button type="submit" class="btn" style="margin-top:14px;">Submit</button>
 </div>
 </form>
@@ -275,9 +211,7 @@ const formCard=document.getElementById('formCard');
 const player2Card=document.getElementById('player2Card');
 const entryForm=document.getElementById('entryForm');
 const messageDiv=document.getElementById('message');
-
 enterBtn.onclick=function(){ landing.classList.add('hidden'); formCard.classList.remove('hidden'); player2Card.classList.remove('hidden'); }
-
 entryForm.onsubmit=async function(e){
 e.preventDefault();
 const data={group:entryForm.group.value,p1:{},p2:{}};
@@ -293,7 +227,6 @@ if(result.ok){ messageDiv.textContent='Form submitted!'; messageDiv.classList.re
 else{ messageDiv.textContent=result.message||'Error'; messageDiv.classList.remove('hidden'); }
 }
 </script>
-
 </div>
 </body>
 </html>`;}
@@ -304,13 +237,25 @@ function teacherDashboard(groups,q=''){
   const rows = groups.map(g=>{
     const m1=g.members[0]||{};
     const m2=g.members[1]||{};
-    return `<tr><td>${escapeHtml(m1.name||'')}</td><td>${escapeHtml(m2.name||'')}</td><td>${escapeHtml(m1.year||'')} ${m2.name?('/ '+escapeHtml(m2.year||'')) : ''}</td><td>${escapeHtml(m1.form||'')} ${m2.name?('/ '+escapeHtml(m2.form||'')) : ''}</td><td>${escapeHtml(m1.experience||'')} ${m2.name?('/ '+escapeHtml(m2.experience||'')) : ''}</td><td>${escapeHtml(m1.past||'')} ${m2.name?('/ '+escapeHtml(m2.past||'')) : ''}</td><td>${escapeHtml(m1.email||'')} ${m2.name?('/ '+escapeHtml(m2.email||'')) : ''}</td><td>${(m1.feePaid?'yes':'no')} ${m2.name?('/ '+(m2.feePaid?'yes':'no')):''}</td><td>${g.groupFeePaid? 'yes':'no'}</td><td>${g.createdAt? new Date(g.createdAt).toLocaleString():''}</td></tr>`;
+    return `<tr>
+<td>${escapeHtml(m1.name||'')}</td>
+<td>${escapeHtml(m2.name||'')}</td>
+<td>${escapeHtml(m1.year||'')} ${m2.name?('/ '+escapeHtml(m2.year||'')) : ''}</td>
+<td>${escapeHtml(m1.form||'')} ${m2.name?('/ '+escapeHtml(m2.form||'')) : ''}</td>
+<td>${escapeHtml(m1.experience||'')} ${m2.name?('/ '+escapeHtml(m2.experience||'')) : ''}</td>
+<td>${escapeHtml(m1.past||'')} ${m2.name?('/ '+escapeHtml(m2.past||'')) : ''}</td>
+<td>${escapeHtml(m1.email||'')} ${m2.name?('/ '+escapeHtml(m2.email||'')) : ''}</td>
+<td>${(m1.feePaid?'yes':'no')} ${m2.name?('/ '+(m2.feePaid?'yes':'no')):''}</td>
+<td>${g.groupFeePaid? 'yes':'no'}</td>
+<td>${g.createdAt? new Date(g.createdAt).toLocaleString():''}</td>
+<td><form method="post" action="/teacher/delete/${g._id}" onsubmit="return confirm('Delete this group?');"><button class="btn" style="background:#c0392b;">🗑️</button></form></td>
+</tr>`;
   }).join('\n');
 
-  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Dashboard</title><style>body{font-family:Inter,Arial;background:#071733;color:#e8f4ff;margin:0;padding:20px}header{display:flex;justify-content:space-between;align-items:center}input{padding:8px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:#e8f4ff}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:left;font-size:13px}a.btn{display:inline-block;padding:8px 10px;background:#1e90ff;color:white;border-radius:8px;text-decoration:none}</style></head><body>
+  return `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Teacher Dashboard</title><style>body{background:#061a33;color:#e8f4ff;font-family:Inter,Arial;margin:0}header{padding:16px;background:#02132a;display:flex;align-items:center;justify-content:space-between}input{padding:8px;border-radius:6px;border:none;background:rgba(255,255,255,0.08);color:white}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:left;font-size:13px}a.btn,button.btn{display:inline-block;padding:8px 10px;background:#1e90ff;color:white;border-radius:8px;text-decoration:none;border:none;cursor:pointer}</style></head><body>
 <header><div><h2>Teacher Dashboard</h2><div style="color:#9fb3d9">${groups.length} groups</div></div>
 <div><form method="get" action="/teacher/dashboard" style="display:inline"><input name="q" placeholder="search name/form/year/email" value="${escapeHtml(q||'')}" /></form>
 <a class="btn" href="/teacher/export.csv">Export CSV</a> <a class="btn" href="/teacher/logout">Logout</a></div></header>
-<div style="margin-top:12px;overflow:auto"><table><thead><tr><th>First</th><th>Second</th><th>Year</th><th>Form</th><th>Exp</th><th>Played Before</th><th>Email</th><th>Fee(each)</th><th>GroupFee</th><th>Created</th></tr></thead><tbody>${rows}</tbody></table></div>
+<div style="margin-top:12px;overflow:auto"><table><thead><tr><th>First</th><th>Second</th><th>Year</th><th>Form</th><th>Exp</th><th>Played Before</th><th>Email</th><th>Fee(each)</th><th>GroupFee</th><th>Created</th><th>Delete</th></tr></thead><tbody>${rows}</tbody></table></div>
 </body></html>`;
 }
